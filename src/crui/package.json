@@ -1,0 +1,24 @@
+{
+  "name": "crui",
+  "version": "1.0.0",
+  "description": "code review ui",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "anthu",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/viz.js": "^2.1.5",
+    "electron": "^31.2.0"
+  },
+  "dependencies": {
+    "d3": "^7.9.0",
+    "jquery": "^3.7.1",
+    "jquery-contextmenu": "^2.9.2",
+    "jstree": "^3.3.16",
+    "prismjs": "^1.29.0",
+    "viz.js": "^2.1.2"
+  }
+}
