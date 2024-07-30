@@ -11,12 +11,12 @@ let globalOutputDir = '';
 app.on('ready', () => {
   mainWindow = new BrowserWindow({
     width: 2560,
-    height: 800,
+    height: 1280,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),      
       nodeIntegration: true,
       contextIsolation: true,
-      enableRemoteModule: false,
+      enableRemoteModule: false
     }
   });
 
@@ -50,11 +50,12 @@ app.on('ready', () => {
     const appRoot = path.join(userHomeDir, '.code-analyzer', 'temp');
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const outputDir = path.join(appRoot, 'analysis_output', timestamp);
+    
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    const command = `conda activate repo_advisor && python C:\\Users\\anthu\\projects\\code2flow\\repo_advisor\\src\\python\\folder_dependency\\main_invoker.py "${folderPath}" "${outputDir}"`;
+    const command = `conda activate repo_advisor && python ..\\python\\folder_dependency\\main_invoker.py  -s "${folderPath}" -o "${outputDir}"`;
     exec(command, (error, stdout, stderr) => {
       if (error) {
         console.error(`Error executing command: ${error.message}`);
@@ -67,8 +68,43 @@ app.on('ready', () => {
       console.log(`Output: ${stdout}`);
     });
 
+    console.log(outputDir);
+
     globalFolderPath = folderPath;
     globalOutputDir = outputDir;
+
+
+  });
+
+
+  ipcMain.handle('function-call-stack-analysis', async (event, function_name) => {
+    if (!globalFolderPath || !globalOutputDir) {
+      return { error: 'Analysis has not been run yet.' };
+    }
+    
+    const callstackPath = path.join(globalOutputDir, function_name + '.png');
+    
+    if (!fs.existsSync(callstackPath)) {
+      const command = `conda activate repo_advisor && python ..\\python\\folder_dependency\\main_invoker.py -s "${globalFolderPath}" -o "${globalOutputDir}" -t "${function_name}"`;
+      console.log(command);
+      exec(command, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`Error executing command: ${error.message}`);
+          return;
+        }
+        if (stderr) {
+          console.error(`Error: ${stderr}`);
+          return;
+        }
+        console.log(`Output: ${stdout}`);
+      });
+  
+    }
+
+    return {call_stack_path: callstackPath};
+
+    
+
   });
 
   ipcMain.handle('get-analysis-info', async (event, subfolderPath) => {
@@ -87,6 +123,25 @@ app.on('ready', () => {
       return { error: 'Analysis info not found.' };
     }
   });
+
+  ipcMain.handle('get-file-analysis-info', async (event, filePath) => {
+    if (!globalFolderPath || !globalOutputDir) {
+      return { error: 'Analysis has not been run yet.' };
+    }
+
+    const relativePath = path.relative(globalFolderPath, filePath);
+    const relativeFolderPath = path.dirname(relativePath);
+    const fileName = path.basename(filePath).replace('.py', '');
+    const analysisFileInfoFile = path.join(globalOutputDir, 'code_info', relativeFolderPath + `\\${fileName}.json`);
+
+    if (fs.existsSync(analysisFileInfoFile)) {
+      return { file_code_info_path: analysisFileInfoFile};
+    } else {
+      return { error: 'Analysis info not found.' };
+    }
+  });
+
+
 
  
 });
