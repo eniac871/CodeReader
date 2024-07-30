@@ -2,7 +2,7 @@ from utils import find_folders_with_file
 from python_file_analyzer import analyze_folder_dependency
 from dependency_analyzer import analysis_dependency
 from folder_analyzer import save_folder_info_to_json
-from call_graph_analyzer import generate_call_graphs_for_folders
+from call_graph_analyzer import generate_call_graphs_for_folders, generate_call_graphs_for_function
 from datetime import datetime
 import os
 import argparse
@@ -26,7 +26,8 @@ def folder_dependency_analysis(target_folder, output_folder="output"):
         to_be_analyzed.append(target_folder)
     
     for analysis_folder in to_be_analyzed:
-        code_analysis_output = output_folder + os.path.sep + analysis_folder.split(os.path.sep)[-1] 
+        code_analysis_output = output_folder 
+        # code_analysis_output = output_folder + os.path.sep + analysis_folder.split(os.path.sep)[-1] 
 
         if not os.path.exists(code_analysis_output):
             os.makedirs(code_analysis_output)
@@ -55,14 +56,25 @@ def project_analysis(target_folder, analysis_info_folder):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Analyze a project folder. ')
-    parser.add_argument('project_folder', type=str, help='The path to the project source code root folder.')
-    parser.add_argument('output_folder', type=str, help='The path to the output folder.')
+    parser.add_argument('-s', '--source', type=str, help='The path to the project source code root folder.')
+    parser.add_argument('-o', '--output', type=str, help='The path to the output folder.')
+    parser.add_argument('-t', '--target_function', type=str, help='The target function to generate call graph for.')
 
     args = parser.parse_args()
 
-    project_folder = args.project_folder
-    output_folder = args.output_folder
+    project_folder = args.source
+    output_folder = args.output
+    target_function = args.target_function
 
-    project_analysis(project_folder, output_folder)
+
+    # project_folder = r"C:\Users\anthu\projects\code2flow\promptflow\src\promptflow-devkit\promptflow"
+    # output_folder = r"C:\Users\anthu\.code-analyzer\temp\analysis_output\2024-07-30T08-50-01-324Z"
+    # target_function = "register_executor"
+    print(target_function)
+
+    if (target_function):
+        generate_call_graphs_for_function(project_folder, output_folder, target_function)
+    else:
+        project_analysis(project_folder, output_folder)
     
     

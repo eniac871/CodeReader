@@ -38,4 +38,59 @@ ul {
   cursor: pointer;
 }
 
+#explorer {
+  display: grid;
+  grid-template-columns: 1fr 2fr 2fr;
+  grid-template-rows: 1fr 1fr;
+  grid-template-areas:
+    "folder-tree file-content1 file-content2"
+    "folder-tree file-content3 file-content4";
+  height: 100vh; /* 使容器占满整个视窗高度 */
+}
+
+#folder-tree {
+  grid-area: folder-tree;
+  background-color: #f0f0f0; /* 可选，设置背景色以便区分区域 */
+}
+
+#file-content1 {
+  grid-area: file-content1;
+  background-color: #ffffff; /* 可选，设置背景色以便区分区域 */
+}
+
+#file-content2 {
+  grid-area: file-content2;
+  background-color: #ffffff; /* 可选，设置背景色以便区分区域 */
+}
+
+#file-content3 {
+  grid-area: file-content3;
+  background-color: #ffffff; /* 可选，设置背景色以便区分区域 */
+}
+
+#file-content4 {
+  grid-area: file-content4;
+  background-color: #ffffff; /* 可选，设置背景色以便区分区域 */
+}
+
+.panel {
+  border: 1px solid #ccc; /* 可选，添加边框以便区分区域 */
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.node circle {
+  fill: #fff;
+  stroke: steelblue;
+  stroke-width: 3px;
+}
+.node text {
+  font: 12px sans-serif;
+}
+.link {
+  fill: none;
+  stroke: #ccc;
+  stroke-width: 2px;
+}
+
 /* Add custom styles for tree view if needed */

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Function Table</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div id="table-container"></div>
+
+    <script>
+        const data = {
+            "root_path": "C:\\Users\\anthu\\projects\\code2flow\\promptflow\\src\\promptflow-core\\promptflow",
+            "file_name": "_constants.py",
+            "relative_path": "",
+            "package_name": "promptflow",
+            "imports": [],
+            "from_imports": {
+                "enum": [
+                    "Enum"
+                ],
+                "pathlib": [
+                    "Path"
+                ]
+            },
+            "classes": [
+                {
+                    "class_name": "FlowLanguage",
+                    "methods": []
+                },
+                {
+                    "class_name": "FlowEntryRegex",
+                    "methods": []
+                }
+            ],
+            "functions": [
+                {
+                    "name": "CustomStrongTypeConnectionConfigs.is_custom_key",
+                    "args": [
+                        "key"
+                    ],
+                    "defaults": [],
+                    "is_async": false,
+                    "access": "public"
+                },
+                {
+                    "name": "TokenKeys.get_all_values",
+                    "args": [],
+                    "defaults": [],
+                    "is_async": false,
+                    "access": "public"
+                }
+            ]
+        };
+
+        function extractFunctionData(data) {
+            return data.functions.map(func => {
+                const [classname, functionName] = func.name.split('.');
+                return {
+                    classname: classname,
+                    functionName: functionName,
+                    access: func.access
+                };
+            });
+        }
+
+        function createTable(data) {
+            const tableContainer = d3.select("#table-container");
+
+            const table = tableContainer.append("table");
+            const thead = table.append("thead");
+            const tbody = table.append("tbody");
+
+            // Add table header
+            thead.append("tr")
+                .selectAll("th")
+                .data(["Classname", "Function Name", "Access", "Operation"])
+                .enter()
+                .append("th")
+                .text(d => d);
+
+            // Add table rows
+            const rows = tbody.selectAll("tr")
+                .data(data)
+                .enter()
+                .append("tr");
+
+            rows.append("td").text(d => d.classname);
+            rows.append("td").text(d => d.functionName);
+            rows.append("td").text(d => d.access);
+            rows.append("td").append("button")
+                .text("callstack")
+                .on("click", (event, d) => {
+                    console.log(`Classname: ${d.classname}, Function Name: ${d.functionName}`);
+                });
+        }
+
+        const functionData = extractFunctionData(data);
+        createTable(functionData);
+    </script>
+</body>
+</html>
