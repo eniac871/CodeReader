@@ -100,7 +100,7 @@ app.on('ready', () => {
       }
     }
   
-    return { internal_call_graph_path: resultPath, relative_path: relativePath };
+    return { internal_call_graph_path: resultPath, relative_path: relativePath, global_folder_path: globalFolderPath };
   });
 
 

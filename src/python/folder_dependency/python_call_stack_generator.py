@@ -25,14 +25,43 @@ def parse_code_to_ast(path):
     ast_dict = ast_to_dict(ast_tree)
     return ast_dict
 
+def convert_to_serializable(obj):
+    if isinstance(obj, dict):
+        return {k: convert_to_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_to_serializable(i) for i in obj]
+    elif isinstance(obj, bytes):
+        return obj.decode('utf-8')  # or another appropriate encoding
+    elif obj is Ellipsis:
+        return '...'  # or another placeholder string
+    else:
+        return obj
+
 def save_ast_to_json(ast_dict, output_path):
+    ast_dict = convert_to_serializable(ast_dict)  # Convert bytes and ellipses to serializable format
     with open(output_path, 'w', encoding='utf-8') as json_file:
         json.dump(ast_dict, json_file, ensure_ascii=False, indent=4)
 
+def convert_serializable_to_original(obj):
+    if isinstance(obj, dict):
+        return {k: convert_serializable_to_original(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_serializable_to_original(i) for i in obj]
+    elif isinstance(obj, str) and obj == '...':
+        return Ellipsis
+    elif isinstance(obj, str):
+        try:
+            return obj.encode('utf-8')  # or another appropriate decoding
+        except UnicodeEncodeError:
+            return obj  # Return the string as is if it can't be encoded
+    else:
+        return obj
+
 def load_ast_from_json(json_path):
     with open(json_path, 'r', encoding='utf-8') as json_file:
-        return json.load(json_file)
-
+        ast_dict = json.load(json_file)
+    # return convert_serializable_to_original(ast_dict)
+    return ast_dict
 def dump_ast_for_directory(source_dir, output_dir):
     for root, _, files in os.walk(source_dir):
         for file in files:
@@ -175,4 +204,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     retrieve_method_callstack(args.ast_dir, args.file_name, args.method_name, args.output_file)
     # build_ast_data(source_dir, output_dir)
-   
+
+# retrieve_method_callstack(r"C:\Users\anthu\.code-analyzer\temp\analysis_output\2024-08-01T06-10-39-930Z\ast_info",
+#                           r"index\cli.py",
+#                           r"index_cli",
+#                           r"C:\Users\anthu\.code-analyzer\temp\analysis_output\2024-08-01T06-10-39-930Z\internal-call-graph\index\cliindex_cli.json")
+
+# build_ast_data(r"C:\Users\anthu\projects\code2flow\target_repo\graphrag\graphrag\index\input",
+#                 r"C:\Users\anthu\.code-analyzer\temp\analysis_output\2024-08-01T05-51-31-944Z\ast_info")

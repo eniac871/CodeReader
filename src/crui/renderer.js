@@ -169,17 +169,14 @@ async function displayFolderBasicInfo(filePath) {
   const contentContainer = document.getElementById('file-content1');
   contentContainer.innerHTML = ''; // Clear the content container
 
-  // const rootAnalysisInfo = await window.electron.getRootAnalysisInfo();
-  // const totalCodeFileLineCount = rootAnalysisInfo.total_source_lines;
-  const width = contentContainer.clientWidth;
-  const height = contentContainer.clientHeight;
+
   const totalCodeFileLineCount = treeData.total_source_lines;
 
 
-
-  const margin = { top: 20, right: 90, bottom: 30, left: 90 };
-  // width = 960 - margin.left - margin.right,
-  // height = 500 - margin.top - margin.bottom;
+  const margin = { top: 20, right: 20, bottom: 20, left: 20 };
+  const buffer = 10;
+  const width = contentContainer.clientWidth - margin.left - margin.right - buffer;
+  const height = contentContainer.clientHeight - margin.top - margin.bottom - buffer;
 
   // Append the svg object to the body of the page
   const svg = d3.select(contentContainer).append("svg")
@@ -357,22 +354,12 @@ $(function () {
     const node = data.node;
     if (node.original && node.original.icon === 'jstree-folder') {
       displayAnalysisInfo(node.id);
-      // window.electron.readDirectory(node.id).then(items => {
-      //   return buildTreeData(items).then(result => {
-      //     displayStats(result.stats);
-      //   });
-      // });
+
     } else if (node.original && node.original.icon === 'jstree-file') {
       const filePath = node.id;
 
       displayFileAnalysis(filePath);
-      // if (isCsvFile(filePath)) {
-      //   displayCsvFile(filePath);
-      // } else if (isJsonFile(filePath)) {
-      //   displayJsonFile(filePath);
-      // } else {
-      //   displayFileContent(filePath);
-      // }
+
     }
   });
 
@@ -414,15 +401,35 @@ async function displayAnalysisInfo(folderPath) {
     // displayInteractDot();
   }
 }
-
 async function displayPngFile(filePath) {
-  // const content = await window.electron.readFile(filePath);
   const contentContainer = document.getElementById('file-content3');
   contentContainer.innerHTML = ''; // Clear the content container
 
   const imgElement = document.createElement('img');
   imgElement.src = filePath;
+  imgElement.style.width = '100%';
+  imgElement.style.height = '100%';
+  imgElement.style.objectFit = 'contain'; // To fit the image within the container
+  imgElement.style.transformOrigin = 'center center'; // To ensure the zoom happens from the center
+
   contentContainer.appendChild(imgElement);
+
+  let zoomLevel = 1;
+
+  imgElement.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    if (event.deltaY < 0) {
+      // Zoom in
+      zoomLevel += 0.1;
+    } else {
+      // Zoom out
+      zoomLevel -= 0.1;
+      if (zoomLevel < 0.1) {
+        zoomLevel = 0.1;
+      }
+    }
+    imgElement.style.transform = `scale(${zoomLevel})`;
+  });
 }
 
 async function displayFileAnalysis(filePath) {
@@ -499,18 +506,21 @@ async function processFunctionCallstack(functionName) {
 }
 async function processInternalFunctionCallstack(filePath, functionName) {
   const internalCallStackResult = await window.electron.getFunctionInternalCallStackAnalysis(filePath, functionName);
-  displayInternalCallJson(internalCallStackResult.internal_call_graph_path, internalCallStackResult.relative_path, functionName);
+  displayInternalCallJson(internalCallStackResult.internal_call_graph_path, internalCallStackResult.relative_path, functionName, internalCallStackResult.global_folder_path);
   // console.log(`Classname: ${d.classname}, Function Name: ${d.functionName}`);
 
 }
 
-async function displayInternalCallJson(filePath, target_root_file, target_root_function) {
+async function displayInternalCallJson(filePath, target_root_file, target_root_function, global_folder_path) {
   const content = await window.electron.readFile(filePath);
   const contentContainer = document.getElementById('file-content4');
   contentContainer.innerHTML = ``;
-  const width = contentContainer.clientWidth;
-  const height = contentContainer.clientHeight;
-  const margin = { top: 20, right: 90, bottom: 30, left: 90 };
+
+  const margin = { top: 20, right: 20, bottom: 20, left: 20 };
+  const buffer = 10;
+  const width = contentContainer.clientWidth - margin.left - margin.right - buffer;
+  const height = contentContainer.clientHeight - margin.top - margin.bottom - buffer;
+
   const data = JSON.parse(content);
   const svg = d3.select(contentContainer).append("svg")
     .attr("width", width)
@@ -519,6 +529,8 @@ async function displayInternalCallJson(filePath, target_root_file, target_root_f
 
   const root = {
     name: target_root_function,
+    file: target_root_file,
+    fullPath: global_folder_path + "\\" + target_root_file,
     children: buildTree(target_root_file + ":" + target_root_function)
   };
 
@@ -527,15 +539,13 @@ async function displayInternalCallJson(filePath, target_root_file, target_root_f
     return data[key].map(item => ({
       name: item.name,
       file: item.file,
+      fullPath: global_folder_path + "\\" + item.file,
       lineno: item.lineno,
       children: buildTree(`${item.file}:${item.name}`)
     }));
   }
 
 
-  function closeTooltip() {
-    tooltip.transition().style("opacity", 0);
-  }
   const tree = d3.tree().size([height, width - 160]),
     stratify = d3.stratify().parentId(d => d.id.substring(0, d.id.lastIndexOf(".")));
 
@@ -554,39 +564,28 @@ async function displayInternalCallJson(filePath, target_root_file, target_root_f
            ${d.parent.y},${d.parent.x}
       `);
 
-  const node = g.selectAll(".node")
-    .data(rootNode.descendants())
-    .enter().append("g")
-    .attr("class", d => "node" + (d.children ? " node--internal" : " node--leaf"))
-    .attr("transform", d => `translate(${d.y},${d.x})`);
+
+      const node = g.selectAll(".node")
+      .data(rootNode.descendants())
+      .enter().append("g")
+      .attr("class", d => "node" + (d.children ? " node--internal" : " node--leaf"))
+      .attr("transform", d => `translate(${d.y},${d.x})`);
 
   node.append("circle")
-    .attr("r", 10);
+      .attr("r", 10);
 
   node.append("text")
-    .attr("dy", 3)
-    .attr("x", d => d.children ? -12 : 12)
-    .style("text-anchor", d => d.children ? "end" : "start")
-    .text(d => `${d.data.lineno}: ${d.data.name}`);
+      .attr("dy", 3)
+      .attr("x", d => d.children ? -12 : 12)
+      .style("text-anchor", d => d.children ? "end" : "start")
+      .html(d => `${d.data.lineno}: <a href="#" onclick="locateFile('${encodeURIComponent(d.data.fullPath)}', '${d.data.name}')">${d.data.name}</a> (${d.data.file})`);
 
-  const tooltip = d3.select("#file-content4").append("div")
-    .attr("class", "tooltip")
-    .style("opacity", 0);
 
-    node.on("mouseover", function(event, d) {
-      closeTooltip();
-      const fileContentRect = document.getElementById('file-content4').getBoundingClientRect();
-      tooltip.transition()
-          .duration(200)
-          .style("opacity", .9);
-      tooltip.html(`<span class="close-btn" onclick="closeTooltip()">×</span>
-          File: <a href="#" onclick="logPathAndNode('${d.data.file}', '${d.data.name}')">${d.data.file}:${d.data.lineno}</a>`)
-          .style("left", (event.pageX - fileContentRect.left + 5) + "px")
-          .style("top", (event.pageY - fileContentRect.top - 28) + "px");
-  })
-    .on("mouseout", function (d) {
-      closeTooltip();
-    });
+}
+
+async function locateFile(encodedPath, functionName) {
+  const decodedPath = decodeURIComponent(encodedPath);
+  displayFileAnalysis(decodedPath);
 }
 async function displayFileContent(filePath) {
   const content = await window.electron.readFile(filePath);
