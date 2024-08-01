@@ -71,6 +71,11 @@ ul {
 #file-content4 {
   grid-area: file-content4;
   background-color: #ffffff; /* 可选，设置背景色以便区分区域 */
+  position: relative;
+  /* width: 600px;
+  height: 400px; */
+  overflow: auto; /* 启用滚动条 */
+  border: 1px solid #ccc; /* 添加边框以更容易看到容器 */
 }
 
 .panel {

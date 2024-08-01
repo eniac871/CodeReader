@@ -73,6 +73,8 @@ def dump_ast_for_directory(source_dir, output_dir):
                 os.makedirs(os.path.dirname(output_path), exist_ok=True)
                 
                 ast_dict = parse_code_to_ast(input_path)
+                ast_dict['_namespace'] = relative_path.replace('.py', '').replace(os.path.sep, '.')
+                ast_dict['_file'] = relative_path
                 save_ast_to_json(ast_dict, output_path)
                 print(f"Processed {input_path} -> {output_path}")
 
@@ -119,12 +121,68 @@ def load_all_asts(output_dir):
                 asts[relative_path] = ast_dict
     return asts
 
-def find_method_calls(ast_dict, method_name, file_path):
+def find_function_definitions(ast):
+    function_full_names = {}
+    
+    # Extract the namespace and file name from the AST
+    namespace = ast.get('_namespace', '')
+    file_name = ast.get('_file', '')
+    
+    # Function to recursively find function definitions in the AST
+    def find_functions(node, current_namespace):
+        if isinstance(node, dict):
+            if node.get('_type') == 'FunctionDef':
+                function_name = node.get('name')
+                full_function_name = f"{current_namespace}.{function_name}"
+                function_full_names[full_function_name] = file_name
+            # Recursively search in the body of the current node
+            for key, value in node.items():
+                find_functions(value, current_namespace)
+        elif isinstance(node, list):
+            for item in node:
+                find_functions(item, current_namespace)
+    
+    # Start the recursive search
+    find_functions(ast, namespace)
+    
+    return function_full_names
+
+def find_method_calls(ast_dict, method_name, file_path,function_definitions):
+    import_from_mapping = {}
+    import_mapping = {}
+    method_namespace = ast_dict.get('_namespace', '')
+
+    class ImportVisitor(ast.NodeVisitor):
+        def visit_ImportFrom(self, node):
+            module_name = node.module
+            for alias in node.names:
+                import_from_mapping[alias.name] = module_name
+            self.generic_visit(node)
+
+        def visit_Import(self, node):
+            for alias in node.names:
+                import_mapping[alias.name] = alias.name
+            self.generic_visit(node)
+
     class MethodCallVisitor(ast.NodeVisitor):
-        def __init__(self, method_name):
+        def _match_call_with_import(self, call_name):
+            if call_name in import_from_mapping:
+                return import_from_mapping[call_name]+ '.' + call_name
+            return call_name
+        def _math_function_source(self,call_name):
+            if call_name in function_definitions:
+                return function_definitions[call_name]
+            return ''
+        def _is_same_namespace(self, call_name, function_definitions):
+            return self.method_namespace+'.'+call_name in function_definitions
+        def __init__(self, method_name, import_mapping, import_from_mapping,function_definitions,method_namespace):
             self.method_name = method_name
             self.calls = []
             self.current_function = None
+            self.import_mapping = import_mapping
+            self.import_from_mapping = import_from_mapping
+            self.function_definitions = function_definitions
+            self.method_namespace = method_namespace
 
         def visit_FunctionDef(self, node):
             if node.name == self.method_name:
@@ -135,22 +193,45 @@ def find_method_calls(ast_dict, method_name, file_path):
         def visit_Call(self, node):
             if self.current_function:  # Only collect calls within functions
                 if isinstance(node.func, ast.Name) and node.func.id != self.method_name:
-                    self.calls.append({
-                        'name': node.func.id,
-                        'file': file_path,
-                        'lineno': node.lineno
-                    })
+                    if self._is_same_namespace(node.func.id, self.function_definitions):
+                        self.calls.append({
+                            'name': self.method_namespace +"." + node.func.id,
+                            'file': file_path,
+                            'lineno': node.lineno
+                        })
+                    else:
+                        self.calls.append({
+                            'name': self._match_call_with_import(node.func.id),
+                            'file': self._math_function_source( self._match_call_with_import(node.func.id)),
+                            'lineno': node.lineno
+                        })
                 elif isinstance(node.func, ast.Attribute) and node.func.attr != self.method_name:
+                    func_full_name = self.get_reversed_attr(node.func)
                     self.calls.append({
-                        'name': node.func.attr,
-                        'file': file_path,
+                        'name': func_full_name,
+                        'file': self._math_function_source(func_full_name),
                         'lineno': node.lineno
                     })
             self.generic_visit(node)
+    
+        def get_reversed_attr(self,node):
+            attr_list = []
+            while isinstance(node, ast.Attribute):
+                attr_list.append(node.attr)
+                node = node.value
+            if isinstance(node, ast.Name):
+                attr_list.append(node.id)
+            return '.'.join(reversed(attr_list)) 
+    ast_tree = dict_to_ast(ast_dict)
+    import_visitor = ImportVisitor()
+    import_visitor.visit(ast_tree)
 
-    method_ast = dict_to_ast(ast_dict)
-    visitor = MethodCallVisitor(method_name)
-    visitor.visit(method_ast)
+    
+    
+
+    # method_ast = dict_to_ast(ast_dict)
+    visitor = MethodCallVisitor(method_name,import_mapping,import_from_mapping,function_definitions,method_namespace)
+    visitor.visit(ast_tree)
     return visitor.calls
 
 def dict_to_ast(d):
@@ -177,23 +258,32 @@ def find_defined_methods(ast_dict):
 def generate_call_stack(asts, file_name, method_name):
     visited = set()
 
-    def recursive_search(file, method, call_stack):
+    function_definitions = {}
+    for ast in asts.values():
+        function_definitions.update(find_function_definitions(ast))
+
+    def recursive_search(file, method, call_stack,function_definitions):
         if file not in asts:
             return call_stack
         ast_dict = asts[file]
-        calls = find_method_calls(ast_dict, method, file)
-        filtered_calls = [call for call in calls if any(call['name'] in find_defined_methods(ast) for ast in asts.values())]
+        calls = find_method_calls(ast_dict, method.split('.')[-1], file,function_definitions)
+        filtered_calls = []
+
+        for call in calls:
+            if call['name'] in function_definitions:
+                filtered_calls.append(call)
+
         call_stack[f"{file}:{method}"] = filtered_calls
         for call in filtered_calls:
             if f"{call['file']}:{call['name']}" not in visited:
                 visited.add(f"{call['file']}:{call['name']}")
                 for f, ast in asts.items():
-                    if call['name'] in find_defined_methods(ast):
-                        recursive_search(f, call['name'], call_stack)
+                    if call['name'] in find_function_definitions(ast):
+                        recursive_search(f, call['name'], call_stack,function_definitions)
         return call_stack
 
     call_stack = {}
-    return recursive_search(file_name, method_name, call_stack)
+    return recursive_search(file_name, method_name, call_stack,function_definitions)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Retrieve a method call stacks given a set of ast.')
@@ -205,10 +295,10 @@ if __name__ == "__main__":
     retrieve_method_callstack(args.ast_dir, args.file_name, args.method_name, args.output_file)
     # build_ast_data(source_dir, output_dir)
 
-# retrieve_method_callstack(r"C:\Users\anthu\.code-analyzer\temp\analysis_output\2024-08-01T06-10-39-930Z\ast_info",
-#                           r"index\cli.py",
-#                           r"index_cli",
-#                           r"C:\Users\anthu\.code-analyzer\temp\analysis_output\2024-08-01T06-10-39-930Z\internal-call-graph\index\cliindex_cli.json")
-
-# build_ast_data(r"C:\Users\anthu\projects\code2flow\target_repo\graphrag\graphrag\index\input",
-#                 r"C:\Users\anthu\.code-analyzer\temp\analysis_output\2024-08-01T05-51-31-944Z\ast_info")
+# retrieve_method_callstack(r"C:\Users\anthu\.code-analyzer\temp\analysis_output\2024-08-01T08-29-00-300Z\ast_info4",
+#                           r"main_invoker.py",
+#                           r"project_analysis",
+#                           r"C:\Users\anthu\.code-analyzer\temp\analysis_output\2024-08-01T06-10-39-930Z\internal-call-graph\index\cliindex_cli2.json")
+# 
+# build_ast_data(r"C:\Users\anthu\projects\code2flow\CodeReader\src\python\folder_dependency",
+#                 r"C:\Users\anthu\.code-analyzer\temp\analysis_output\2024-08-01T08-29-00-300Z\ast_info4")
