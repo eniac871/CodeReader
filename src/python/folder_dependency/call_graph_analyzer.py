@@ -19,13 +19,13 @@ def _generate_call_path(raw_source_paths, output_file, target_function = "", ups
         except Exception as e:
             print(f"Error generating call graph: {e}")
     
-def generate_call_graphs_for_folders(src_folder: str, output_folder: str):
+def generate_call_graphs_for_folders(src_folder: str, output_folder: str, extension ='.png'):
     """Recursively generate call graphs for each folder"""
     for root, dirs, files in os.walk(src_folder):
         relative_path = os.path.relpath(root, src_folder)
         output_dir = os.path.join(output_folder, relative_path)
         pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
-        output_file = os.path.join(output_dir, 'call_graph.png')
+        output_file = os.path.join(output_dir, 'call_graph'+ extension)
         _generate_call_path(root, output_file)
         # if dirs:
         #     python_files = [os.path.join(root, file) for file in files if file.endswith('.py')]
@@ -42,8 +42,8 @@ def generate_call_graphs_for_function(src_folder: str, output_folder: str, targe
 
 
 if __name__ == "__main__":
-    # generate_call_graphs_for_folders(src_folder =r'C:\Users\anthu\projects\code2flow\target_repo\promptflow\src\promptflow-devkit\promptflow',
-    #                    output_folder= r'C:\Users\anthu\projects\code2flow\repo_advisor\crui_output\callgraphtest\promptflow')
-    generate_call_graphs_for_function(src_folder =r'C:\Users\anthu\projects\code2flow\target_repo\promptflow\src\promptflow-devkit\promptflow',
-                       output_folder= r'C:\Users\anthu\projects\code2flow\repo_advisor\crui_output\callgraphtest\promptflow', 
-                       target_function = 'run_command')
+    generate_call_graphs_for_folders(src_folder =r'C:\Users\anthu\projects\code2flow\target_repo\promptflow\src\promptflow-devkit\promptflow',
+                       output_folder= r'C:\Users\anthu\projects\code2flow\repo_advisor\crui_output\callgraphtest\promptflow',extension='.json')
+    # generate_call_graphs_for_function(src_folder =r'C:\Users\anthu\projects\code2flow\target_repo\promptflow\src\promptflow-devkit\promptflow',
+    #                    output_folder= r'C:\Users\anthu\projects\code2flow\repo_advisor\crui_output\callgraphtest\promptflow', 
+    #                    target_function = 'run_command')

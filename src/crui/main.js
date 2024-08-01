@@ -3,6 +3,9 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { exec } = require('child_process');
+const util = require('util');
+const execPromise = util.promisify(exec);
+
 
 let mainWindow;
 let globalFolderPath = '';
@@ -76,35 +79,56 @@ app.on('ready', () => {
 
   });
 
+  ipcMain.handle('function-internal-call-graph-analysis', async (event, filePath, functionName) => {
+    if (!globalFolderPath || !globalOutputDir) {
+      return { error: 'Analysis has not been run yet.' };
+    }
+    const relativePath = path.relative(globalFolderPath, filePath);
+    const filePathWithoutExtension = relativePath.replace('.py', '');
+    const astFolderPath = path.join(globalOutputDir, "ast_info");
+    const resultPath = path.join(globalOutputDir, "internal-call-graph", filePathWithoutExtension + functionName + '.json');
+  
+    if (!fs.existsSync(resultPath)) {
+      const command = `conda activate repo_advisor && python ..\\python\\folder_dependency\\python_call_stack_generator.py -a "${astFolderPath}" -f "${relativePath}" -m "${functionName}" -o "${resultPath}"`;
+      console.log(command);
+  
+      try {
+        await execPromise(command);
+      } catch (error) {
+        console.error(`Error executing command: ${error.message}`);
+        return { error: `Error executing command: ${error.message}` };
+      }
+    }
+  
+    return { internal_call_graph_path: resultPath, relative_path: relativePath };
+  });
+
 
   ipcMain.handle('function-call-stack-analysis', async (event, function_name) => {
     if (!globalFolderPath || !globalOutputDir) {
       return { error: 'Analysis has not been run yet.' };
     }
-    
+  
     const callstackPath = path.join(globalOutputDir, function_name + '.png');
-    
+  
     if (!fs.existsSync(callstackPath)) {
       const command = `conda activate repo_advisor && python ..\\python\\folder_dependency\\main_invoker.py -s "${globalFolderPath}" -o "${globalOutputDir}" -t "${function_name}"`;
       console.log(command);
-      exec(command, (error, stdout, stderr) => {
-        if (error) {
-          console.error(`Error executing command: ${error.message}`);
-          return;
-        }
+  
+      try {
+        const { stdout, stderr } = await execPromise(command);
         if (stderr) {
           console.error(`Error: ${stderr}`);
-          return;
+          return { error: `Error: ${stderr}` };
         }
         console.log(`Output: ${stdout}`);
-      });
-  
+      } catch (error) {
+        console.error(`Error executing command: ${error.message}`);
+        return { error: `Error executing command: ${error.message}` };
+      }
     }
-
-    return {call_stack_path: callstackPath};
-
-    
-
+  
+    return { call_stack_path: callstackPath };
   });
 
   ipcMain.handle('get-analysis-info', async (event, subfolderPath) => {

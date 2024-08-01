@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Call Stack Tree</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        .node circle {
+            fill: #fff;
+            stroke: steelblue;
+            stroke-width: 3px;
+        }
+        .node text {
+            font: 12px sans-serif;
+        }
+        .link {
+            fill: none;
+            stroke: #ccc;
+            stroke-width: 2px;
+        }
+        .tooltip {
+            position: absolute;
+            text-align: center;
+            width: 200px;
+            height: auto;
+            padding: 5px;
+            font: 12px sans-serif;
+            background: lightsteelblue;
+            border: 0px;
+            border-radius: 8px;
+            pointer-events: auto;
+        }
+        .tooltip .close-btn {
+            float: right;
+            cursor: pointer;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <svg width="960" height="600"></svg>
+    <script>
+        const data = {
+            "call_stack\\test.py:main": [
+                {"name": "process_directory", "file": "call_stack\\test.py", "lineno": 143},
+                {"name": "load_all_asts", "file": "call_stack\\test.py", "lineno": 144},
+                {"name": "generate_call_stack", "file": "call_stack\\test.py", "lineno": 145}
+            ],
+            "call_stack\\test.py:process_directory": [
+                {"name": "parse_code_to_ast", "file": "call_stack\\test.py", "lineno": 45},
+                {"name": "save_ast_to_json", "file": "call_stack\\test.py", "lineno": 46}
+            ],
+            "call_stack\\test.py:parse_code_to_ast": [],
+            "call_stack\\ast\\python_generator.py:parse_code_to_ast": [],
+            "call_stack\\test.py:save_ast_to_json": [],
+            "call_stack\\ast\\python_generator.py:save_ast_to_json": [],
+            "call_stack\\test.py:load_all_asts": [
+                {"name": "load_ast_from_json", "file": "call_stack\\test.py", "lineno": 55}
+            ],
+            "call_stack\\test.py:load_ast_from_json": [],
+            "call_stack\\ast\\python_generator.py:load_ast_from_json": [],
+            "call_stack\\test.py:generate_call_stack": []
+        };
+
+        const root = {
+            name: "main",
+            children: buildTree("call_stack\\test.py:main")
+        };
+
+        function buildTree(key) {
+            if (!data[key]) return [];
+            return data[key].map(item => ({
+                name: item.name,
+                file: item.file,
+                lineno: item.lineno,
+                children: buildTree(`${item.file}:${item.name}`)
+            }));
+        }
+
+        function logPathAndNode(file, name) {
+            console.log(`File: ${file}, Node: ${name}`);
+        }
+
+        function closeTooltip() {
+            tooltip.transition().style("opacity", 0);
+        }
+
+        const svg = d3.select("svg"),
+              width = +svg.attr("width"),
+              height = +svg.attr("height"),
+              g = svg.append("g").attr("transform", "translate(40,0)");
+
+        const tree = d3.tree().size([height, width - 160]),
+              stratify = d3.stratify().parentId(d => d.id.substring(0, d.id.lastIndexOf(".")));
+
+        const rootNode = d3.hierarchy(root);
+
+        tree(rootNode);
+
+        const link = g.selectAll(".link")
+            .data(rootNode.descendants().slice(1))
+            .enter().append("path")
+            .attr("class", "link")
+            .attr("d", d => `
+                M${d.y},${d.x}
+                C${(d.y + d.parent.y) / 2},${d.x}
+                 ${(d.y + d.parent.y) / 2},${d.parent.x}
+                 ${d.parent.y},${d.parent.x}
+            `);
+
+        const node = g.selectAll(".node")
+            .data(rootNode.descendants())
+            .enter().append("g")
+            .attr("class", d => "node" + (d.children ? " node--internal" : " node--leaf"))
+            .attr("transform", d => `translate(${d.y},${d.x})`);
+
+        node.append("circle")
+            .attr("r", 10);
+
+        node.append("text")
+            .attr("dy", 3)
+            .attr("x", d => d.children ? -12 : 12)
+            .style("text-anchor", d => d.children ? "end" : "start")
+            .text(d => `${d.data.lineno}: ${d.data.name}`);
+
+        const tooltip = d3.select("body").append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0);
+
+        node.on("mouseover", function(event, d) {
+            closeTooltip();
+            tooltip.transition()
+                .duration(200)
+                .style("opacity", .9);
+            tooltip.html(`<span class="close-btn" onclick="closeTooltip()">×</span>
+                File: <a href="#" onclick="logPathAndNode('${d.data.file}', '${d.data.name}')">${d.data.file}:${d.data.lineno}</a>`)
+                .style("left", (event.pageX + 5) + "px")
+                .style("top", (event.pageY - 28) + "px");
+        });
+
+        window.closeTooltip = closeTooltip;
+        window.logPathAndNode = logPathAndNode;
+    </script>
+</body>
+</html>

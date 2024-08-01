@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('electron', {
   getAnalysisInfo: (folderPath) => ipcRenderer.invoke('get-analysis-info', folderPath),
   getFileAnalysisInfo: (filePath) => ipcRenderer.invoke('get-file-analysis-info', filePath),
   getFunctionCallStackAnalysis: (functionName) => ipcRenderer.invoke('function-call-stack-analysis', functionName),
+  getFunctionInternalCallStackAnalysis: (filePath, functionName) => ipcRenderer.invoke('function-internal-call-graph-analysis', filePath, functionName),
   // renderGraphviz: async (dotContent) => {
   //   return render(dotContent);
   // }

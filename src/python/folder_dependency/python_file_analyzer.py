@@ -85,7 +85,7 @@ def write_file_info_to_json(file_info: FileInfo, file_path: Path):
         json.dump(asdict(file_info), f, indent=4)
 
 def process_python_files(input_root: Path, output_root: Path):
-    parser = CodeParser()
+    parser = CodeParser()  
     for python_file in input_root.rglob('*.py'):
         print(f"Processing: {python_file}")
         try:

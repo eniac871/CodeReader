@@ -487,6 +487,7 @@ async function displayFileFunctions(filePath) {
     .text("callstack")
     .on("click", (event, d) => {
       processFunctionCallstack(d.functionName);
+      processInternalFunctionCallstack(filePath, d.functionName);
     });
 }
 
@@ -496,7 +497,97 @@ async function processFunctionCallstack(functionName) {
   // console.log(`Classname: ${d.classname}, Function Name: ${d.functionName}`);
 
 }
+async function processInternalFunctionCallstack(filePath, functionName) {
+  const internalCallStackResult = await window.electron.getFunctionInternalCallStackAnalysis(filePath, functionName);
+  displayInternalCallJson(internalCallStackResult.internal_call_graph_path, internalCallStackResult.relative_path, functionName);
+  // console.log(`Classname: ${d.classname}, Function Name: ${d.functionName}`);
 
+}
+
+async function displayInternalCallJson(filePath, target_root_file, target_root_function) {
+  const content = await window.electron.readFile(filePath);
+  const contentContainer = document.getElementById('file-content4');
+  contentContainer.innerHTML = ``;
+  const width = contentContainer.clientWidth;
+  const height = contentContainer.clientHeight;
+  const margin = { top: 20, right: 90, bottom: 30, left: 90 };
+  const data = JSON.parse(content);
+  const svg = d3.select(contentContainer).append("svg")
+    .attr("width", width)
+    .attr("height", height),
+    g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  const root = {
+    name: target_root_function,
+    children: buildTree(target_root_file + ":" + target_root_function)
+  };
+
+  function buildTree(key) {
+    if (!data[key]) return [];
+    return data[key].map(item => ({
+      name: item.name,
+      file: item.file,
+      lineno: item.lineno,
+      children: buildTree(`${item.file}:${item.name}`)
+    }));
+  }
+
+
+  function closeTooltip() {
+    tooltip.transition().style("opacity", 0);
+  }
+  const tree = d3.tree().size([height, width - 160]),
+    stratify = d3.stratify().parentId(d => d.id.substring(0, d.id.lastIndexOf(".")));
+
+  const rootNode = d3.hierarchy(root);
+
+  tree(rootNode);
+
+  const link = g.selectAll(".link")
+    .data(rootNode.descendants().slice(1))
+    .enter().append("path")
+    .attr("class", "link")
+    .attr("d", d => `
+          M${d.y},${d.x}
+          C${(d.y + d.parent.y) / 2},${d.x}
+           ${(d.y + d.parent.y) / 2},${d.parent.x}
+           ${d.parent.y},${d.parent.x}
+      `);
+
+  const node = g.selectAll(".node")
+    .data(rootNode.descendants())
+    .enter().append("g")
+    .attr("class", d => "node" + (d.children ? " node--internal" : " node--leaf"))
+    .attr("transform", d => `translate(${d.y},${d.x})`);
+
+  node.append("circle")
+    .attr("r", 10);
+
+  node.append("text")
+    .attr("dy", 3)
+    .attr("x", d => d.children ? -12 : 12)
+    .style("text-anchor", d => d.children ? "end" : "start")
+    .text(d => `${d.data.lineno}: ${d.data.name}`);
+
+  const tooltip = d3.select("#file-content4").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+
+    node.on("mouseover", function(event, d) {
+      closeTooltip();
+      const fileContentRect = document.getElementById('file-content4').getBoundingClientRect();
+      tooltip.transition()
+          .duration(200)
+          .style("opacity", .9);
+      tooltip.html(`<span class="close-btn" onclick="closeTooltip()">×</span>
+          File: <a href="#" onclick="logPathAndNode('${d.data.file}', '${d.data.name}')">${d.data.file}:${d.data.lineno}</a>`)
+          .style("left", (event.pageX - fileContentRect.left + 5) + "px")
+          .style("top", (event.pageY - fileContentRect.top - 28) + "px");
+  })
+    .on("mouseout", function (d) {
+      closeTooltip();
+    });
+}
 async function displayFileContent(filePath) {
   const content = await window.electron.readFile(filePath);
   const contentContainer = document.getElementById('file-content1');

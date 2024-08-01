@@ -3,6 +3,7 @@ from python_file_analyzer import analyze_folder_dependency
 from dependency_analyzer import analysis_dependency
 from folder_analyzer import save_folder_info_to_json
 from call_graph_analyzer import generate_call_graphs_for_folders, generate_call_graphs_for_function
+from python_call_stack_generator import build_ast_data
 from datetime import datetime
 import os
 import argparse
@@ -43,6 +44,7 @@ def project_analysis(target_folder, analysis_info_folder):
     folder_analysis_output = analysis_info_folder + os.path.sep  + 'folder_info'
     folder_package_dep_analysis_output = analysis_info_folder  + os.path.sep + 'folder_package_dep_info'
     folder_call_graph_output = analysis_info_folder  + os.path.sep + 'folder_call_graph_info'
+    ast_output = analysis_info_folder + os.path.sep + 'ast_info'
     
     code_analysis_result_path = folder_dependency_analysis(target_folder, code_analysis_output_folder)[0]
     save_folder_info_to_json(target_folder, folder_analysis_output, target_folder, code_analysis_result_path)
@@ -50,6 +52,8 @@ def project_analysis(target_folder, analysis_info_folder):
     analysis_dependency(code_analysis_result_path,folder_package_dep_analysis_output,"csv")
 
     generate_call_graphs_for_folders(target_folder, folder_call_graph_output)
+
+    build_ast_data(target_folder, ast_output)
     
     return analysis_info_folder
     
