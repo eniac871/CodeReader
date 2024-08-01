@@ -18,27 +18,12 @@
             stroke: #ccc;
             stroke-width: 2px;
         }
-        .tooltip {
-            position: absolute;
-            text-align: center;
-            width: 200px;
-            height: auto;
-            padding: 5px;
-            font: 12px sans-serif;
-            background: lightsteelblue;
-            border: 0px;
-            border-radius: 8px;
-            pointer-events: auto;
-        }
-        .tooltip .close-btn {
-            float: right;
-            cursor: pointer;
-            font-weight: bold;
-        }
     </style>
 </head>
 <body>
-    <svg width="960" height="600"></svg>
+    <div id="file-content4" style="position: relative;">
+        <svg width="960" height="600"></svg>
+    </div>
     <script>
         const data = {
             "call_stack\\test.py:main": [
@@ -81,10 +66,6 @@
             console.log(`File: ${file}, Node: ${name}`);
         }
 
-        function closeTooltip() {
-            tooltip.transition().style("opacity", 0);
-        }
-
         const svg = d3.select("svg"),
               width = +svg.attr("width"),
               height = +svg.attr("height"),
@@ -121,24 +102,8 @@
             .attr("dy", 3)
             .attr("x", d => d.children ? -12 : 12)
             .style("text-anchor", d => d.children ? "end" : "start")
-            .text(d => `${d.data.lineno}: ${d.data.name}`);
+            .html(d => `${d.data.lineno}: <a href="#" onclick="logPathAndNode('${d.data.file}', '${d.data.name}')">${d.data.name}</a>(${d.data.file})`);
 
-        const tooltip = d3.select("body").append("div")
-            .attr("class", "tooltip")
-            .style("opacity", 0);
-
-        node.on("mouseover", function(event, d) {
-            closeTooltip();
-            tooltip.transition()
-                .duration(200)
-                .style("opacity", .9);
-            tooltip.html(`<span class="close-btn" onclick="closeTooltip()">×</span>
-                File: <a href="#" onclick="logPathAndNode('${d.data.file}', '${d.data.name}')">${d.data.file}:${d.data.lineno}</a>`)
-                .style("left", (event.pageX + 5) + "px")
-                .style("top", (event.pageY - 28) + "px");
-        });
-
-        window.closeTooltip = closeTooltip;
         window.logPathAndNode = logPathAndNode;
     </script>
 </body>

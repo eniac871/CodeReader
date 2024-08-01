@@ -93,4 +93,25 @@ ul {
   stroke-width: 2px;
 }
 
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+table, th, td {
+  border: 1px solid black;
+}
+th, td {
+  padding: 10px;
+  text-align: left;
+}
+
+#file-content3 {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#file-content3 img {
+  transition: transform 0.3s ease;
+}
 /* Add custom styles for tree view if needed */
