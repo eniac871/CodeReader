@@ -523,8 +523,8 @@ async function displayInternalCallJson(filePath, target_root_file, target_root_f
 
   const data = JSON.parse(content);
   const svg = d3.select(contentContainer).append("svg")
-    .attr("width", width)
-    .attr("height", height),
+    .attr("width", 1200)
+    .attr("height", 800),
     g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
   const root = {
@@ -535,14 +535,23 @@ async function displayInternalCallJson(filePath, target_root_file, target_root_f
   };
 
   function buildTree(key) {
-    if (!data[key]) return [];
-    return data[key].map(item => ({
-      name: item.name,
-      file: item.file,
-      fullPath: global_folder_path + "\\" + item.file,
-      lineno: item.lineno,
-      children: buildTree(`${item.file}:${item.name}`)
-    }));
+    if (!data[key]) 
+      return [];
+  
+    var result = [];
+    for (var i = 0; i < data[key].length; i++) {
+      var item = data[key][i];
+      var treeNode = {
+        name: item.name,
+        file: item.file,
+        fullPath: global_folder_path + "\\" + item.file,
+        lineno: item.lineno,
+        children: buildTree(item.file + ":" + item.name)
+      };
+      result.push(treeNode);
+    }
+  
+    return result;
   }
 
 
@@ -572,11 +581,11 @@ async function displayInternalCallJson(filePath, target_root_file, target_root_f
       .attr("transform", d => `translate(${d.y},${d.x})`);
 
   node.append("circle")
-      .attr("r", 10);
+      .attr("r", 5);
 
   node.append("text")
       .attr("dy", 3)
-      .attr("x", d => d.children ? -12 : 12)
+      .attr("x", d => d.children ? -8 : 8)
       .style("text-anchor", d => d.children ? "end" : "start")
       .html(d => `${d.data.lineno}: <a href="#" onclick="locateFile('${encodeURIComponent(d.data.fullPath)}', '${d.data.name}')">${d.data.name}</a> (${d.data.file})`);
 
