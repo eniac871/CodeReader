@@ -243,12 +243,12 @@ async function displayFolderBasicInfo(filePath) {
       .attr('r', 1e-6)
       .style("fill", d => d._children ? "lightsteelblue" : "#fff");
 
-    // Add labels for the nodes
-    nodeEnter.append('text')
-      .attr("dy", ".35em")
-      .attr("x", d => d.children || d._children ? -13 : 13)
-      .attr("text-anchor", d => d.children || d._children ? "end" : "start")
-      .text(d => d.data.name);
+    // // Add labels for the nodes
+    // nodeEnter.append('text')
+    //   .attr("dy", ".35em")
+    //   .attr("x", d => d.children || d._children ? -13 : 13)
+    //   .attr("text-anchor", d => d.children || d._children ? "end" : "start")
+    //   .text(d => d.data.name);
 
     // // Add tooltip for the nodes
     nodeEnter.append('title')
@@ -341,6 +341,45 @@ async function displayFolderBasicInfo(filePath) {
     }
   }
 }
+
+
+$(function () {
+  $('#folder-tree').jstree({
+    'core': {
+      'data': [],
+      'check_callback': true
+    },
+    'plugins': ['wholerow']
+  }).on('select_node.jstree', function (e, data) {
+    const node = data.node;
+    if (node.original && node.original.icon === 'jstree-folder') {
+      displayAnalysisInfo(node.id);
+
+    } else if (node.original && node.original.icon === 'jstree-file') {
+      const filePath = node.id;
+
+      displayFileAnalysis(filePath);
+
+    }
+  });
+
+  $.contextMenu({
+    selector: '#folder-tree .jstree-node',
+    build: function ($trigger, e) {
+      const node = $('#folder-tree').jstree(true).get_node($trigger);
+      return {
+        items: {
+          analyze: {
+            name: "Analysis from here",
+            callback: function () {
+              analyzeFromHere(node.id);
+            }
+          }
+        }
+      };
+    }
+  });
+});
 
 
 $(function () {
@@ -631,68 +670,84 @@ async function displayCsvFile(filePath) {
 
   const svg = d3.select('#file-content2').append('svg')
     .attr('width', width)
-    .attr('height', height);
+    .attr('height', height)
+    .attr("viewBox", [0, 0, width, height]);
 
-  // Define the arrow marker
-  svg.append('defs').append('marker')
-    .attr('id', 'arrowhead')
-    .attr('viewBox', '-0 -5 10 10')
-    .attr('refX', 13)
-    .attr('refY', 0)
-    .attr('orient', 'auto')
-    .attr('markerWidth', 13)
-    .attr('markerHeight', 13)
-    .attr('xoverflow', 'visible')
-    .append('svg:path')
-    .attr('d', 'M 0,-5 L 10 ,0 L 0,5')
-    .attr('fill', '#999')
-    .style('stroke', 'none');
+    const simulation = d3.forceSimulation(graph.nodes)
+      .force("link", d3.forceLink(graph.links).id(d => d.id).distance(10))
+      .force("charge", d3.forceManyBody().strength(-50))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("y", d3.forceY().strength(0.1));
 
-  const link = svg.append('g')
-    .selectAll('line')
-    .data(graph.links)
-    .enter().append('line')
-    .attr('stroke-width', 1)
-    .attr('stroke', '#999')
-    .attr('marker-end', 'url(#arrowhead)');
+    const link = svg.append("g")
+      .attr("stroke", "#999")
+      .attr("stroke-opacity", 0.6)
+      .selectAll("line")
+      .data(graph.links)
+      .join("line")
+      .attr("stroke-width", 1.5);
 
-  const node = svg.append('g')
-    .selectAll('circle')
-    .data(graph.nodes)
-    .enter().append('circle')
-    .attr('r', 5)
-    .attr('fill', '#69b3a2')
+    const node = svg.append("g")
+      .attr("stroke", "#fff")
+      .attr("stroke-width", 1.5)
+      .selectAll("circle")
+      .data(graph.nodes)
+      .join("circle")
+      .attr("r", 8)
+      .attr("fill", "steelblue")
+      .call(drag(simulation));
 
-  const labels = svg.append('g')
-    .selectAll('text')
-    .data(graph.nodes)
-    .enter().append('text')
-    .attr('dy', -10)
-    .attr('dx', 10)
-    .text(d => d.name);
+    node.append("title")
+      .text(d => d.id);
 
+    svg.append("g")
+      .selectAll("text")
+      .data(graph.nodes)
+      .enter()
+      .append("text")
+      .attr("dx", 12)
+      .attr("dy", ".35em")
+      .text(d => d.id);
 
-  const simulation = d3.forceSimulation(graph.nodes)
-    .force('link', d3.forceLink(graph.links).id(d => d.id))
-    .force('charge', d3.forceManyBody().strength(-400))
-    .force('center', d3.forceCenter(width / 2, height / 2));
-  // .force('y', d3.forceY().strength(1.5).y(d => d.depth * 1000)); // Force nodes to be positioned vertically
+    simulation.on("tick", () => {
+      link
+        .attr("x1", d => d.source.x)
+        .attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x)
+        .attr("y2", d => d.target.y);
 
-  simulation.on('tick', () => {
-    link
-      .attr('x1', d => d.source.x)
-      .attr('y1', d => d.source.y)
-      .attr('x2', d => d.target.x)
-      .attr('y2', d => d.target.y);
+      node
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y);
 
-    node
-      .attr('cx', d => d.x)
-      .attr('cy', d => d.y);
+      svg.selectAll("text")
+        .attr("x", d => d.x)
+        .attr("y", d => d.y);
+    });
 
-    labels
-      .attr('x', d => d.x)
-      .attr('y', d => d.y);
-  });
+    function drag(simulation) {
+      function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      }
+
+      function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+      }
+
+      function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+      }
+
+      return d3.drag()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended);
+    }
 }
 
 function parseCsv(csvContent) {
