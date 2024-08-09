@@ -435,7 +435,7 @@ async function displayAnalysisInfo(folderPath) {
   } else {
     // displayJsonFile(analysisInfo.folder_info_path);
     displayFolderBasicInfo(analysisInfo.folder_info_path);
-    displayCsvFile(analysisInfo.package_dep_info_path);
+    displayDotFile(analysisInfo.package_dep_info_path);
     displayPngFile(analysisInfo.folder_call_graph_info_path);
     // displayInteractDot();
   }
@@ -658,121 +658,19 @@ async function displayFileContent(filePath) {
   // Set the content with syntax highlighting
   contentContainer.innerHTML = `<pre><code class="language-${language}">${Prism.highlight(content, Prism.languages[language], language)}</code></pre>`;
 }
-async function displayCsvFile(filePath) {
+async function displayDotFile(filePath) {
   const content = await window.electron.readFile(filePath);
   const contentContainer = document.getElementById('file-content2');
   contentContainer.innerHTML = ''; // Clear the content container
 
-  const graph = parseCsv(content);
+  try {
+    // 将 .dot 内容转换为 SVG
+    const svg = await graphviz.dot(content);
 
-  const width = contentContainer.clientWidth - 20;
-  const height = contentContainer.clientHeight - 20;
-
-  const svg = d3.select('#file-content2').append('svg')
-    .attr('width', width)
-    .attr('height', height)
-    .attr("viewBox", [0, 0, width, height]);
-
-    const simulation = d3.forceSimulation(graph.nodes)
-      .force("link", d3.forceLink(graph.links).id(d => d.id).distance(10))
-      .force("charge", d3.forceManyBody().strength(-50))
-      .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("y", d3.forceY().strength(0.1));
-
-    const link = svg.append("g")
-      .attr("stroke", "#999")
-      .attr("stroke-opacity", 0.6)
-      .selectAll("line")
-      .data(graph.links)
-      .join("line")
-      .attr("stroke-width", 1.5);
-
-    const node = svg.append("g")
-      .attr("stroke", "#fff")
-      .attr("stroke-width", 1.5)
-      .selectAll("circle")
-      .data(graph.nodes)
-      .join("circle")
-      .attr("r", 8)
-      .attr("fill", "steelblue")
-      .call(drag(simulation));
-
-    node.append("title")
-      .text(d => d.id);
-
-    svg.append("g")
-      .selectAll("text")
-      .data(graph.nodes)
-      .enter()
-      .append("text")
-      .attr("dx", 12)
-      .attr("dy", ".35em")
-      .text(d => d.id);
-
-    simulation.on("tick", () => {
-      link
-        .attr("x1", d => d.source.x)
-        .attr("y1", d => d.source.y)
-        .attr("x2", d => d.target.x)
-        .attr("y2", d => d.target.y);
-
-      node
-        .attr("cx", d => d.x)
-        .attr("cy", d => d.y);
-
-      svg.selectAll("text")
-        .attr("x", d => d.x)
-        .attr("y", d => d.y);
-    });
-
-    function drag(simulation) {
-      function dragstarted(event, d) {
-        if (!event.active) simulation.alphaTarget(0.3).restart();
-        d.fx = d.x;
-        d.fy = d.y;
-      }
-
-      function dragged(event, d) {
-        d.fx = event.x;
-        d.fy = event.y;
-      }
-
-      function dragended(event, d) {
-        if (!event.active) simulation.alphaTarget(0);
-        d.fx = null;
-        d.fy = null;
-      }
-
-      return d3.drag()
-        .on("start", dragstarted)
-        .on("drag", dragged)
-        .on("end", dragended);
-    }
-}
-
-function parseCsv(csvContent) {
-  const lines = csvContent.split('\n').filter(line => line.trim() !== '');
-  const headers = lines[0].split(',');
-  const nodes = [];
-  const links = [];
-  const nodeSet = new Set();
-
-  for (let i = 1; i < lines.length; i++) {
-    const data = lines[i].split(',');
-    const type = data[0];
-    const source = data[1];
-    const target = data[2];
-
-    if (type === 'Node' && !nodeSet.has(source)) {
-      const parts = source.split('.');
-      nodes.push({ id: source, name: parts[parts.length - 1] });
-      nodeSet.add(source);
-    }
-
-    if (type === 'Edge') {
-      links.push({ source, target });
-    }
+    // 将 SVG 插入到 contentContainer 中
+    contentContainer.innerHTML = svg;
+  } catch (error) {
+    console.error('Error rendering DOT file:', error);
+    contentContainer.textContent = 'Failed to render the DOT file.';
   }
-
-  return { nodes, links };
 }
