@@ -1,6 +1,6 @@
 from utils import find_folders_with_file
 from python_file_analyzer import analyze_folder_dependency
-from dependency_analyzer import analysis_dependency
+from dependency_analyzer import analysis_dependency,generate_dot_result
 from folder_analyzer import save_folder_info_to_json
 from call_graph_analyzer import generate_call_graphs_for_folders, generate_call_graphs_for_function
 from python_call_stack_generator import build_ast_data
@@ -50,6 +50,7 @@ def project_analysis(target_folder, analysis_info_folder):
     save_folder_info_to_json(target_folder, folder_analysis_output, target_folder, code_analysis_result_path)
     
     analysis_dependency(code_analysis_result_path,folder_package_dep_analysis_output,"csv")
+    generate_dot_result(folder_package_dep_analysis_output)
 
     generate_call_graphs_for_folders(target_folder, folder_call_graph_output)
 
