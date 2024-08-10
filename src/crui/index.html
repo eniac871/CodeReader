@@ -11,7 +11,19 @@
 </head>
 <body>
   <div id="app">
-    <button id="select-folder">Select Folder</button>
+    <div style="display: flex; justify-content: start; align-items: center; gap: 20px; padding: 10px;"></div>
+      <button id="select-folder">Select Folder</button>
+
+      <div id="project-language-selection">
+        <label for="select-language">Select Language:</label>
+        <select id="select-language">
+          <option value="" disabled selected>Select Language</option>
+          <option value="csharp">c#</option>
+          <option value="python">python</option>
+        </select>
+      </div>
+    </div>
+
     <div id="explorer">
       <div id="folder-tree" class="panel"></div>
       <div id="file-content1" class="panel"></div>
@@ -21,6 +33,7 @@
       <div id="file-content4" class="panel"></div>
     </div>
   </div>
+
   <script src="node_modules/jquery/dist/jquery.min.js"></script>
   <script src="node_modules/jstree/dist/jstree.min.js"></script>
   <script src="node_modules/jquery-contextmenu/dist/jquery.contextMenu.min.js"></script>
