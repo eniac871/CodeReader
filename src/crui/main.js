@@ -58,32 +58,25 @@ app.on('ready', () => {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
-
-  const runAnalysis = () => {
-    return new Promise((resolve, reject) => {
-        const command = `conda run -n repo_advisor python ..\\python\\folder_dependency\\main_invoker.py -s "${folderPath}" -o "${outputDir}"`;
-        exec(command, (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Error executing command: ${error.message}`);
-                reject(error);
-                return;
-            }
-            console.log(`Output: ${stdout}`);
-            if (stderr) {
-                console.warn(`Stderr: ${stderr}`);
-            }
-            resolve({ stdout, stderr });
-        });
+    const command = `conda activate repo_advisor && python ..\\python\\folder_dependency\\main_invoker.py  -s "${folderPath}" -o "${outputDir}"`;
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error executing command: ${error.message}`);
+        return;
+      }
+      if (stderr) {
+        console.error(`Error: ${stderr}`);
+        return;
+      }
+      console.log(`Output: ${stdout}`);
     });
-  };
 
-  const result = await runAnalysis();
-  console.log(outputDir);
+    console.log(outputDir);
 
-  globalFolderPath = folderPath;
-  globalOutputDir = outputDir;
+    globalFolderPath = folderPath;
+    globalOutputDir = outputDir;
 
-  return { folderPath, outputDir, result };
+
   });
 
   ipcMain.handle('function-internal-call-graph-analysis', async (event, filePath, functionName) => {
@@ -145,7 +138,7 @@ app.on('ready', () => {
 
     const relativePath = path.relative(globalFolderPath, subfolderPath);
     const analysisFolderInfoFile = path.join(globalOutputDir, 'folder_info', relativePath + '\\info.json');
-    const analysisPackageDepInfoFile = path.join(globalOutputDir, 'folder_package_dep_info', relativePath + '\\graph.dot');
+    const analysisPackageDepInfoFile = path.join(globalOutputDir, 'folder_package_dep_info', relativePath + '\\graph.csv');
     const analysisFolderCallGraphInfoFile = path.join(globalOutputDir, 'folder_call_graph_info', relativePath + '\\call_graph.png');
 
     if (fs.existsSync(analysisFolderInfoFile) || fs.existsSync(analysisPackageDepInfoFile)) {

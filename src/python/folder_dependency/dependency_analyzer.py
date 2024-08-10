@@ -5,7 +5,6 @@ import os
 from pathlib import Path
 from collections import defaultdict
 from typing import Dict, List, Set
-from generate_class_graph import recursively_traverse_and_create_graphs
 # Define a data class to store information
 @dataclass
 class FileInfo:
@@ -148,16 +147,16 @@ def generate_dependency_graph_csv(package_dict:Dict[str,Set[str]], dependency_di
     filtered_dependencies = generate_dep_node_edges(package_dict,dependency_dict)
     # Prepare data for CSV
     csv_data = []
-    csv_data.append(['Type', 'Source', 'Target', 'Label', 'Identifier', 'TypeKind'])
+    csv_data.append(['Type', 'Source', 'Target', 'Label'])
 
     # Extract nodes information
     for package in filtered_dependencies:
-        csv_data.append(['Node', package, '', '', '', 'Class'])
+        csv_data.append(['Node', package, '', ''])
 
     # Extract edges information
     for package, deps in filtered_dependencies.items():
         for dep in deps:
-            csv_data.append(['Edge', package, dep, '', '', ''])
+            csv_data.append(['Edge', package, dep, ''])
 
     return csv_data
 
@@ -222,9 +221,6 @@ def analysis_dependency(root_folder, output_folder, format="png"):
             generate_dependency_graph_graphviz(package_dict, import_dependencies).render(output_pattern+"\\dependency_graph_", format=format, cleanup=True)
 
 
-def generate_dot_result(output_folder):
-    # temporarily only read 1 graph.csv. And generate graph.dot in the same folder.
-    recursively_traverse_and_create_graphs(output_folder, output_folder, "graph")
 
 
 if __name__ == "__main__":
