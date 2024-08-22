@@ -11,7 +11,7 @@
   "license": "ISC",
   "devDependencies": {
     "@types/viz.js": "^2.1.5",
-    "electron": "^31.2.0"
+    "electron": "^31.3.1"
   },
   "dependencies": {
     "cytoscape": "^3.30.1",

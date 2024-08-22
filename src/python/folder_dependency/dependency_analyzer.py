@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 from collections import defaultdict
 from typing import Dict, List, Set
+from generate_class_graph import recursively_traverse_and_create_graphs
 # Define a data class to store information
 @dataclass
 class FileInfo:
@@ -147,16 +148,16 @@ def generate_dependency_graph_csv(package_dict:Dict[str,Set[str]], dependency_di
     filtered_dependencies = generate_dep_node_edges(package_dict,dependency_dict)
     # Prepare data for CSV
     csv_data = []
-    csv_data.append(['Type', 'Source', 'Target', 'Label'])
+    csv_data.append(['Type', 'Identifier', 'Source', 'Target', 'Label', 'TypeKind'])
 
     # Extract nodes information
     for package in filtered_dependencies:
-        csv_data.append(['Node', package, '', ''])
+        csv_data.append(['Node', package, '', '', package, 'Class'])
 
     # Extract edges information
     for package, deps in filtered_dependencies.items():
         for dep in deps:
-            csv_data.append(['Edge', package, dep, ''])
+            csv_data.append(['Edge', '', package, dep, 'reference', ''])
 
     return csv_data
 
@@ -222,6 +223,9 @@ def analysis_dependency(root_folder, output_folder, format="png"):
 
 
 
+def generate_gv_result(input_folder, output_folder, create_png=True):
+    # temporarily only read 1 graph.csv. Add generate graph.dot in the same folder
+    recursively_traverse_and_create_graphs(input_folder, output_folder, create_png=create_png,output_file_name=None)
 
 if __name__ == "__main__":
     project_name = "promptflow"
