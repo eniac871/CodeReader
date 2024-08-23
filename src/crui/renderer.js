@@ -451,7 +451,7 @@ async function displayAnalysisInfo(folderPath) {
   }
 }
 
-async function displayPngFile(filePath) {
+async function displayPngFile(filePath, isCsharp = false) {
   if(isCsharp){
     // Clear the container as we don't need file-content1 for csharp scenario.
     const contentContainer = document.getElementById('file-content3');
