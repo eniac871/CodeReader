@@ -168,14 +168,7 @@ async function displayInteractDot() {
     // Handle dragging behavior here
   });
 }
-async function displayFolderBasicInfo(filePath, isCsharp = false) {
-  if(isCsharp){
-    // Clear the container as we don't need file-content1 for csharp scenario.
-    const contentContainer = document.getElementById('file-content1');
-    contentContainer.innerHTML = '';
-    contentContainer.textContent = 'No content in file-content1 for c# scenario';
-    return;
-  }
+async function displayFolderBasicInfo(filePath) {
   const content = await window.electron.readFile(filePath);
   const treeData = JSON.parse(content);
   const contentContainer = document.getElementById('file-content1');
