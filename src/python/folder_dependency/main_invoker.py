@@ -37,7 +37,7 @@ def folder_dependency_analysis(target_folder, output_folder="output"):
     return output_list
 
 
-def project_analysis(target_folder, analysis_info_folder):
+def project_analysis(target_folder, analysis_info_folder, only_get_info=False):
     # current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     code_analysis_output_folder = analysis_info_folder + os.path.sep  + 'code_info'
@@ -48,7 +48,9 @@ def project_analysis(target_folder, analysis_info_folder):
     
     code_analysis_result_path = folder_dependency_analysis(target_folder, code_analysis_output_folder)[0]
     save_folder_info_to_json(target_folder, folder_analysis_output, target_folder, code_analysis_result_path)
-    
+    if only_get_info:
+        # only calculate info.js
+        return analysis_info_folder
     analysis_dependency(code_analysis_result_path,folder_package_dep_analysis_output,"csv")
     generate_gv_result(folder_package_dep_analysis_output, folder_package_dep_analysis_output)
 
@@ -64,7 +66,12 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--source', type=str, help='The path to the project source code root folder.')
     parser.add_argument('-o', '--output', type=str, help='The path to the output folder.')
     parser.add_argument('-t', '--target_function', type=str, help='The target function to generate call graph for.')
-    parser.add_argument('-l', '--language', type=str, choices=['csharp', 'python', 'java'], help='The programming language of the project (e.g., csharp, python, java)')
+    parser.add_argument('-l', '--language', type=str, choices=['csharp', 'python', 'java'], help='The programming '
+                                                                                                 'language of the '
+                                                                                                 'project (e.g., '
+                                                                                                 'csharp, python, '
+                                                                                                 'java)')
+    parser.add_argument('-c', '--csharpDir', type=str, help='The path to get graph.csv for c# scenario')
 
     args = parser.parse_args()
 
@@ -72,6 +79,7 @@ if __name__ == "__main__":
     output_folder = args.output
     target_function = args.target_function
     language = args.language
+    csharp_location = args.csharpDir
 
 
     # project_folder = r"C:\Users\anthu\projects\code2flow\promptflow\src\promptflow-devkit\promptflow"
@@ -79,10 +87,11 @@ if __name__ == "__main__":
     # target_function = "register_executor"
     print(target_function)
 
-    if (target_function):
+    if target_function:
         generate_call_graphs_for_function(project_folder, output_folder, target_function)
-    if (language == 'csharp'):
-        generate_gv_result(project_folder, output_folder, False)
+    if language == 'csharp':
+        generate_gv_result(csharp_location, csharp_location, False)
+        project_analysis(project_folder, output_folder, True)
     else:
         project_analysis(project_folder, output_folder)
     

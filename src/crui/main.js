@@ -83,7 +83,7 @@ app.on('ready', () => {
           if (global.selectedLanguage == 'csharp') {
             const csharpDir = path.join(outputDir, 'folder_package_dep_info');
             // the input is outputDir/csharpcsv, output should be root folder to align with python analyser
-            command = `conda activate repo_advisor && python ..\\python\\folder_dependency\\main_invoker.py -s "${csharpDir}" -o "${csharpDir}" -l csharp`;
+            command = `conda activate repo_advisor && python ..\\python\\folder_dependency\\main_invoker.py -s "${folderPath}" -o "${outputDir}" -l csharp -c "${csharpDir}"`;
           }
           else {
             command = `conda activate repo_advisor && python ..\\python\\folder_dependency\\main_invoker.py  -s "${folderPath}" -o "${outputDir}"`;
@@ -188,7 +188,7 @@ app.on('ready', () => {
 
     if (fs.existsSync(analysisFolderInfoFile) || fs.existsSync(analysisPackageDepInfoFile)) {
       if(global.selectedLanguage=='csharp') {
-        return {package_dep_info_path: analysisPackageDepInfoFile, isCsharp: true};
+        return {folder_info_path: analysisFolderInfoFile, package_dep_info_path: analysisPackageDepInfoFile, isCsharp: true};
       }
       else
       {
